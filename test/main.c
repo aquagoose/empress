@@ -6,7 +6,7 @@ int main(void)
     EmpContext* context;
 
     EmpApplicationInfo appInfo;
-    appInfo.appName = "grumpse";
+    appInfo.appUniqueName = "grumpse";
 
     EmpResult result = empCreate(&appInfo, &context);
     if (result != EMP_RESULT_OK)

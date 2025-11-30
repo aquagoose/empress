@@ -16,7 +16,8 @@ typedef enum
 
 typedef struct
 {
-    const char *appName;
+    const char *appUniqueName;
+    const char *appFriendlyName;
 } EmpApplicationInfo;
 
 typedef struct EmpContext EmpContext;
