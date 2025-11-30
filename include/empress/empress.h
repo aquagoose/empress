@@ -36,13 +36,20 @@ typedef struct
     const char *appFriendlyName;
 } EmpApplicationInfo;
 
+typedef struct
+{
+    const char* name;
+} EmpTrackMetadata;
+
 typedef struct EmpContext EmpContext;
 
 EMP_EXPORT EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context);
 EMP_EXPORT void empDestroy(EmpContext *context);
 
 EMP_EXPORT void empSetButtonPressedCallback(EmpContext *context, void(*callback)(EmpContext*, EmpButton));
+
 EMP_EXPORT void empSetPlayState(EmpContext *context, EmpPlayState state);
+EMP_EXPORT void empSetTrackMetadata(EmpContext *context, EmpTrackMetadata *metadata);
 
 #ifdef __cplusplus
 }

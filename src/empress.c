@@ -9,6 +9,13 @@
 #define DBUS_METHOD_IMPL(FuncName) static int FuncName(sd_bus_message *reply, void *userdata, sd_bus_error *ret_error)
 #define DBUS_RETURN(Types, ...) return sd_bus_message_append(reply, Types, __VA_ARGS__)
 
+#define DBUS_KEY_VALUE(Key, Value) {\
+    sd_bus_message_open_container(reply, 'e', "sv");\
+    sd_bus_message_append(reply, "s", Key);\
+    sd_bus_message_append(reply, "v", "s", Value);\
+    sd_bus_message_close_container(reply);\
+}
+
 typedef struct
 {
     EmpApplicationInfo appInfo;
@@ -17,7 +24,9 @@ typedef struct
     sd_event* event;
     sd_bus_slot* mprisSlot;
     sd_bus_slot* playerSlot;
+
     EmpPlayState currentPlayState;
+    EmpTrackMetadata trackMetadata;
 
     void(*buttonPressedCallback)(EmpContext*, EmpButton);
 } MprisContext;
@@ -82,24 +91,40 @@ DBUS_PROPERTY_IMPL(GetPlaybackStatus)
     DBUS_RETURN("s", PlayStateToDBusString(ctx->currentPlayState));
 }
 
+DBUS_PROPERTY_IMPL(GetMetadata)
+{
+    const MprisContext* ctx = (MprisContext*) userdata;
+    const EmpTrackMetadata* metadata = &ctx->trackMetadata;
+
+    sd_bus_message_open_container(reply, 'a', "{sv}");
+
+    if (metadata->name)
+        DBUS_KEY_VALUE("xesam:title", metadata->name);
+
+    return sd_bus_message_close_container(reply);
+}
+
 DBUS_METHOD_IMPL(Play)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PLAY);
+    if (ctx->buttonPressedCallback)
+        ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PLAY);
     DBUS_RETURN("", "");
 }
 
 DBUS_METHOD_IMPL(Pause)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PAUSE);
+    if (ctx->buttonPressedCallback)
+        ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PAUSE);
     DBUS_RETURN("", "");
 }
 
 DBUS_METHOD_IMPL(Stop)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_STOP);
+    if (ctx->buttonPressedCallback)
+        ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_STOP);
     DBUS_RETURN("", "");
 }
 
@@ -121,6 +146,7 @@ static const sd_bus_vtable PlayerVtable[] = {
     SD_BUS_PROPERTY("CanPlay", "b", GetCanPlay, 0, 0),
     SD_BUS_PROPERTY("CanPause", "b", GetCanPause, 0, 0),
     SD_BUS_PROPERTY("PlaybackStatus", "s", GetPlaybackStatus, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Metadata", "a{sv}", GetMetadata, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Play", "", "", Play, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Pause", "", "", Pause, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Stop", "", "", Stop, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -131,6 +157,7 @@ static const sd_bus_vtable PlayerVtable[] = {
 void* EventLoop(void* arg)
 {
     sd_event_loop((sd_event*) arg);
+    return NULL;
 }
 
 EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
@@ -140,6 +167,7 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
         return EMP_RESULT_UNKNOWN_ERROR;
     ctx->appInfo = *appInfo;
     ctx->currentPlayState = EMP_PLAY_STATE_STOPPED;
+    memset(&ctx->trackMetadata, 0, sizeof(EmpTrackMetadata));
     ctx->buttonPressedCallback = NULL;
 
     if (sd_bus_open_user(&ctx->bus) < 0)
@@ -149,9 +177,11 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
     int baseLength = strlen(baseName);
     int appLength = strlen(appInfo->appUniqueName);
 
-    char* appName[baseLength + appLength];
+    char* appName = calloc((baseLength + appLength), sizeof(char*));
     strcat(appName, baseName);
     strcat(appName, appInfo->appUniqueName);
+
+    printf("%s\n", appName);
 
     if (sd_bus_add_object_vtable(ctx->bus, &ctx->mprisSlot, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2", MprisVtable, ctx) < 0)
         return EMP_RESULT_UNKNOWN_ERROR;
@@ -161,6 +191,8 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
 
     if (sd_bus_request_name(ctx->bus, appName, 0) < 0)
         return EMP_RESULT_INVALID_APP_NAME;
+
+    free(appName);
 
     if (sd_event_new(&ctx->event) < 0)
         return EMP_RESULT_UNKNOWN_ERROR;
@@ -200,4 +232,11 @@ void empSetPlayState(EmpContext* context, EmpPlayState state)
     const char* dbusState = PlayStateToDBusString(state);
     printf("%s\n", dbusState);
     sd_bus_emit_properties_changed(ctx->bus, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", "PlaybackStatus", NULL);
+}
+
+void empSetTrackMetadata(EmpContext* context, EmpTrackMetadata* metadata)
+{
+    MprisContext* ctx = (MprisContext*) context;
+    ctx->trackMetadata = *metadata;
+    sd_bus_emit_properties_changed(ctx->bus, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", "Metadata", NULL);
 }

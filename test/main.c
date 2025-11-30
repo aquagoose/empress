@@ -34,6 +34,11 @@ int main(void)
     empSetButtonPressedCallback(context, ButtonPressedCallback);
     empSetPlayState(context, EMP_PLAY_STATE_PAUSED);
 
+    EmpTrackMetadata metadata = {0};
+    metadata.name = "Test Track";
+
+    empSetTrackMetadata(context, &metadata);
+
     for (;;)
     {
         sleep(1);
