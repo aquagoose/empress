@@ -7,6 +7,7 @@
 typedef struct
 {
     sd_bus* bus;
+    sd_event* event;
 } MprisContext;
 
 EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
@@ -29,6 +30,12 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
     if (sd_bus_request_name(ctx->bus, appName, 0) < 0)
         return EMP_RESULT_INVALID_APP_NAME;
 
+    if (sd_event_new(&ctx->event) < 0)
+        return EMP_RESULT_UNKNOWN_ERROR;
+
+    if (sd_bus_attach_event(ctx->bus, ctx->event, 0) < 0)
+        return EMP_RESULT_UNKNOWN_ERROR;
+
     *context = ctx;
 
     return EMP_RESULT_OK;
@@ -37,6 +44,8 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
 void empDestroy(EmpContext *context)
 {
     MprisContext* ctx = (MprisContext*) context;
+    sd_bus_detach_event(ctx->bus);
+    sd_event_unref(ctx->event);
     sd_bus_unref(ctx->bus);
     free(ctx);
 }

@@ -10,3 +10,6 @@ add_library(empress SHARED
 target_include_directories(empress PUBLIC include)
 
 target_link_libraries(empress PRIVATE systemd)
+
+add_executable(empress-test test/main.c)
+target_link_libraries(empress-test empress)
