@@ -14,6 +14,22 @@ typedef enum
     EMP_RESULT_INVALID_APP_NAME
 } EmpResult;
 
+typedef enum
+{
+    EMP_PLAY_STATE_STOPPED,
+    EMP_PLAY_STATE_PAUSED,
+    EMP_PLAY_STATE_PLAYING
+} EmpPlayState;
+
+typedef enum
+{
+    EMP_BUTTON_PLAY,
+    EMP_BUTTON_PAUSE,
+    EMP_BUTTON_STOP,
+    EMP_BUTTON_NEXT,
+    EMP_BUTTON_PREVIOUS
+} EmpButton;
+
 typedef struct
 {
     const char *appUniqueName;
@@ -24,6 +40,9 @@ typedef struct EmpContext EmpContext;
 
 EMP_EXPORT EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context);
 EMP_EXPORT void empDestroy(EmpContext *context);
+
+EMP_EXPORT void empSetButtonPressedCallback(EmpContext *context, void(*callback)(EmpContext*, EmpButton));
+EMP_EXPORT void empSetPlayState(EmpContext *context, EmpPlayState state);
 
 #ifdef __cplusplus
 }
