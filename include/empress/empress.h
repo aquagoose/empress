@@ -38,7 +38,14 @@ typedef struct
 
 typedef struct
 {
-    const char* name;
+    const char* title;
+    int numArtists;
+    const char** artists;
+    const char* album;
+    unsigned long int length;
+    int numGenres;
+    const char** genres;
+
 } EmpTrackMetadata;
 
 typedef struct EmpContext EmpContext;

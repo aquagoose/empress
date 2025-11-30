@@ -9,12 +9,27 @@
 #define DBUS_METHOD_IMPL(FuncName) static int FuncName(sd_bus_message *reply, void *userdata, sd_bus_error *ret_error)
 #define DBUS_RETURN(Types, ...) return sd_bus_message_append(reply, Types, __VA_ARGS__)
 
-#define DBUS_KEY_VALUE(Key, Value) {\
+#define DBUS_KEY_VALUE(Key, Type, Value) {\
     sd_bus_message_open_container(reply, 'e', "sv");\
     sd_bus_message_append(reply, "s", Key);\
-    sd_bus_message_append(reply, "v", "s", Value);\
+    sd_bus_message_append(reply, "v", Type, Value);\
     sd_bus_message_close_container(reply);\
 }
+
+#define DBUS_OPEN_ARRAY(Key, Type) {\
+    sd_bus_message_open_container(reply, 'e', "sv");\
+    sd_bus_message_append(reply, "s", Key);\
+    sd_bus_message_open_container(reply, 'v', "a"Type);\
+    sd_bus_message_open_container(reply, 'a', Type);\
+}
+
+#define DBUS_CLOSE_ARRAY() {\
+    sd_bus_message_close_container(reply);\
+    sd_bus_message_close_container(reply);\
+    sd_bus_message_close_container(reply);\
+}
+
+#define DBUS_ARRAY_VALUE(Type, Value) sd_bus_message_append(reply, Type, Value)
 
 typedef struct
 {
@@ -98,8 +113,37 @@ DBUS_PROPERTY_IMPL(GetMetadata)
 
     sd_bus_message_open_container(reply, 'a', "{sv}");
 
-    if (metadata->name)
-        DBUS_KEY_VALUE("xesam:title", metadata->name);
+    if (metadata->title)
+        DBUS_KEY_VALUE("xesam:title", "s", metadata->title);
+
+    if (metadata->numArtists > 0 && metadata->artists)
+    {
+        DBUS_OPEN_ARRAY("xesam:artist", "s");
+
+        for (int i = 0; i < metadata->numArtists; i++)
+            DBUS_ARRAY_VALUE("s", metadata->artists[i]);
+
+        DBUS_CLOSE_ARRAY();
+    }
+
+    if (metadata->album)
+        DBUS_KEY_VALUE("xesam:album", "s", metadata->album);
+
+    if (metadata->length > 0)
+    {
+        unsigned long int lengthInMicroseconds = metadata->length * 1000;
+        DBUS_KEY_VALUE("mpris:length", "x", lengthInMicroseconds);
+    }
+
+    if (metadata->numGenres > 0 && metadata->genres)
+    {
+        DBUS_OPEN_ARRAY("xesam:genres", "s");
+
+        for (int i = 0; i < metadata->numGenres; i++)
+            DBUS_ARRAY_VALUE("s", metadata->genres[i]);
+
+        DBUS_CLOSE_ARRAY();
+    }
 
     return sd_bus_message_close_container(reply);
 }

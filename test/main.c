@@ -35,7 +35,15 @@ int main(void)
     empSetPlayState(context, EMP_PLAY_STATE_PAUSED);
 
     EmpTrackMetadata metadata = {0};
-    metadata.name = "Test Track";
+    metadata.title = "Test Track";
+    metadata.album = "Test Album";
+    const char* artists[2] = { "Artist 1", "Artist 2" };
+    metadata.numArtists = 2;
+    metadata.artists = artists;
+    metadata.length = 50 * 1000;
+    const char* genres[2] = { "Dance", "Pop" };
+    metadata.numGenres = 2;
+    metadata.genres = genres;
 
     empSetTrackMetadata(context, &metadata);
 
