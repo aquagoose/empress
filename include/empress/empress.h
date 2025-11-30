@@ -5,9 +5,13 @@
 extern "C" {
 #endif
 
+#define EMP_EXPORT
+
 typedef enum
 {
-    EMP_RESULT_OK
+    EMP_RESULT_OK,
+    EMP_RESULT_UNKNOWN_ERROR,
+    EMP_RESULT_INVALID_APP_NAME
 } EmpResult;
 
 typedef struct
@@ -17,8 +21,8 @@ typedef struct
 
 typedef struct EmpContext EmpContext;
 
-EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext *context);
-void empDestroy(EmpContext *context);
+EMP_EXPORT EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context);
+EMP_EXPORT void empDestroy(EmpContext *context);
 
 #ifdef __cplusplus
 }
