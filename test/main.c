@@ -20,19 +20,33 @@ void ButtonPressedCallback(EmpContext* context, EmpButton button)
     empSetPlayState(context, isPlaying ? EMP_PLAY_STATE_PLAYING : EMP_PLAY_STATE_PAUSED);
 }
 
+void SeekCallback(EmpContext* context, size_t position, long int seek)
+{
+    printf("%lu\n", position);
+    printf("%lu\n", seek);
+}
+
 int main(void)
 {
     EmpContext* context;
 
     EmpApplicationInfo appInfo;
-    appInfo.appUniqueName = "grumpse";
+    appInfo.appUniqueName = "test";
+    appInfo.appFriendlyName = "Test";
+    appInfo.desktopEntry = "/home/aqua/.local/share/applications/Glimpse";
 
     EmpResult result = empCreate(&appInfo, &context);
     if (result != EMP_RESULT_OK)
         return 1;
 
-    empSetButtonPressedCallback(context, ButtonPressedCallback);
+    empSetCanPlay(context, true);
+    empSetCanPause(context, true);
+    empSetCanSeek(context, true);
+    empSetCanGoNext(context, true);
+    empSetCanGoPrevious(context, true);
     empSetPlayState(context, EMP_PLAY_STATE_PAUSED);
+    empSetButtonPressedCallback(context, ButtonPressedCallback);
+    empSetSeekCallback(context, SeekCallback);
 
     EmpTrackMetadata metadata = {0};
     metadata.trackNumber = 1;
@@ -41,7 +55,7 @@ int main(void)
     const char* artists[2] = { "Artist 1", "Artist 2" };
     metadata.numArtists = 2;
     metadata.artists = artists;
-    metadata.length = 50 * 1000;
+    metadata.length = 50;
     const char* genres[2] = { "Dance", "Pop" };
     metadata.numGenres = 2;
     metadata.genres = genres;

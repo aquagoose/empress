@@ -1,2 +1,2 @@
 # empress
-A simple MPRIS server.
+Simple MPRIS server for media players.

@@ -1,5 +1,6 @@
 #ifndef EMPRESS_H
 #define EMPRESS_H
+#include <stdbool.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -33,8 +34,9 @@ typedef enum
 
 typedef struct
 {
-    const char *appUniqueName;
-    const char *appFriendlyName;
+    const char* appUniqueName;
+    const char* appFriendlyName;
+    const char* desktopEntry;
 } EmpApplicationInfo;
 
 typedef struct
@@ -56,10 +58,19 @@ typedef struct EmpContext EmpContext;
 EMP_EXPORT EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context);
 EMP_EXPORT void empDestroy(EmpContext *context);
 
+EMP_EXPORT void empSetFocusCallback(EmpContext *context, void(*callback)(EmpContext*));
 EMP_EXPORT void empSetButtonPressedCallback(EmpContext *context, void(*callback)(EmpContext*, EmpButton));
+EMP_EXPORT void empSetSeekCallback(EmpContext *context, void(*callback)(EmpContext*, size_t, long int));
 
 EMP_EXPORT void empSetPlayState(EmpContext *context, EmpPlayState state);
 EMP_EXPORT void empSetTrackMetadata(EmpContext *context, EmpTrackMetadata *metadata);
+EMP_EXPORT void empClearTrackMetadata(EmpContext *context);
+
+EMP_EXPORT void empSetCanPlay(EmpContext *context, bool value);
+EMP_EXPORT void empSetCanPause(EmpContext *context, bool value);
+EMP_EXPORT void empSetCanSeek(EmpContext *context, bool value);
+EMP_EXPORT void empSetCanGoNext(EmpContext *context, bool value);
+EMP_EXPORT void empSetCanGoPrevious(EmpContext *context, bool value);
 
 #ifdef __cplusplus
 }
