@@ -1,5 +1,6 @@
 #ifndef EMPRESS_H
 #define EMPRESS_H
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,13 +39,15 @@ typedef struct
 
 typedef struct
 {
+    int trackNumber;
     const char* title;
     int numArtists;
     const char** artists;
     const char* album;
-    unsigned long int length;
+    size_t length;
     int numGenres;
     const char** genres;
+    const char* imageUri;
 
 } EmpTrackMetadata;
 

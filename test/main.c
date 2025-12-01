@@ -35,6 +35,7 @@ int main(void)
     empSetPlayState(context, EMP_PLAY_STATE_PAUSED);
 
     EmpTrackMetadata metadata = {0};
+    metadata.trackNumber = 1;
     metadata.title = "Test Track";
     metadata.album = "Test Album";
     const char* artists[2] = { "Artist 1", "Artist 2" };
@@ -44,6 +45,7 @@ int main(void)
     const char* genres[2] = { "Dance", "Pop" };
     metadata.numGenres = 2;
     metadata.genres = genres;
+    metadata.imageUri = "file:///home/aqua/Music/Music/Tame Impala/Currents/Tame Impala - Currents.jpg";
 
     empSetTrackMetadata(context, &metadata);
 

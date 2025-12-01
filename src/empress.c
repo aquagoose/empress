@@ -113,6 +113,9 @@ DBUS_PROPERTY_IMPL(GetMetadata)
 
     sd_bus_message_open_container(reply, 'a', "{sv}");
 
+    if (metadata->trackNumber > 0)
+        DBUS_KEY_VALUE("xesam:trackNumber", "x", metadata->trackNumber);
+
     if (metadata->title)
         DBUS_KEY_VALUE("xesam:title", "s", metadata->title);
 
@@ -144,6 +147,9 @@ DBUS_PROPERTY_IMPL(GetMetadata)
 
         DBUS_CLOSE_ARRAY();
     }
+
+    if (metadata->imageUri)
+        DBUS_KEY_VALUE("mpris:artUrl", "s", metadata->imageUri);
 
     return sd_bus_message_close_container(reply);
 }
