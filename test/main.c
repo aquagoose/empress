@@ -20,7 +20,7 @@ void ButtonPressedCallback(EmpContext* context, EmpButton button)
     empSetPlayState(context, isPlaying ? EMP_PLAY_STATE_PLAYING : EMP_PLAY_STATE_PAUSED);
 }
 
-void SeekCallback(EmpContext* context, size_t position, long int seek)
+void SeekCallback(EmpContext* context, size_t position, long long seek)
 {
     printf("%lu\n", position);
     printf("%lu\n", seek);

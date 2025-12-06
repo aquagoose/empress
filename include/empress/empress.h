@@ -60,8 +60,9 @@ EMP_EXPORT void empDestroy(EmpContext *context);
 
 EMP_EXPORT void empSetFocusCallback(EmpContext *context, void(*callback)(EmpContext*));
 EMP_EXPORT void empSetButtonPressedCallback(EmpContext *context, void(*callback)(EmpContext*, EmpButton));
-EMP_EXPORT void empSetSeekCallback(EmpContext *context, void(*callback)(EmpContext*, size_t, long int));
+EMP_EXPORT void empSetSeekCallback(EmpContext *context, void(*callback)(EmpContext*, size_t, long long));
 
+EMP_EXPORT void empSetPlayPosition(EmpContext *context, size_t position);
 EMP_EXPORT void empSetPlayState(EmpContext *context, EmpPlayState state);
 EMP_EXPORT void empSetTrackMetadata(EmpContext *context, EmpTrackMetadata *metadata);
 EMP_EXPORT void empClearTrackMetadata(EmpContext *context);

@@ -52,7 +52,7 @@ typedef struct
 
     void(*focusCallback)(EmpContext*);
     void(*buttonPressedCallback)(EmpContext*, EmpButton);
-    void(*seekCallback)(EmpContext*, size_t, long int);
+    void(*seekCallback)(EmpContext*, size_t, long long);
 } MprisContext;
 
 const char* PlayStateToDBusString(const EmpPlayState state)
@@ -176,7 +176,7 @@ DBUS_PROPERTY_IMPL(GetMetadata)
 
     if (metadata->length > 0)
     {
-        unsigned long int lengthInMicroseconds = metadata->length * 1000 * 1000;
+        unsigned long int lengthInMicroseconds = metadata->length;
         DBUS_KEY_VALUE("mpris:length", "x", lengthInMicroseconds);
     }
 
@@ -243,7 +243,6 @@ DBUS_METHOD_IMPL(SetPosition)
     {
         size_t position;
         sd_bus_message_read(reply, "ox", NULL, &position);
-        position /= 1000 * 1000;
         ctx->seekCallback((EmpContext*) ctx, position, 0);
     }
     DBUS_RETURN("", "");
@@ -256,7 +255,6 @@ DBUS_METHOD_IMPL(Seek)
     {
         long int seekAmount;
         sd_bus_message_read(reply, "x", &seekAmount);
-        seekAmount /= 1000 * 1000;
         ctx->seekCallback((EmpContext*) ctx, seekAmount, 0);
     }
     DBUS_RETURN("", "");
@@ -292,6 +290,7 @@ static const sd_bus_vtable PlayerVtable[] = {
     SD_BUS_METHOD("Previous", "", "", Previous, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("SetPosition", "ox", "", SetPosition, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Seek", "x", "", Seek, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_SIGNAL("Seeked", "x", 0),
 
     SD_BUS_VTABLE_END
 };
@@ -358,7 +357,7 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
 
     pthread_create(&ctx->thread, NULL, EventLoop, ctx->event);
 
-    *context = ctx;
+    *context = (EmpContext*) ctx;
 
     return EMP_RESULT_OK;
 }
@@ -387,10 +386,15 @@ void empSetButtonPressedCallback(EmpContext* context, void(*callback)(EmpContext
     ctx->buttonPressedCallback = callback;
 }
 
-void empSetSeekCallback(EmpContext* context, void(*callback)(EmpContext*, size_t, long int))
+void empSetSeekCallback(EmpContext* context, void(*callback)(EmpContext*, size_t, long long))
 {
     MprisContext* ctx = (MprisContext*) context;
     ctx->seekCallback = callback;
+}
+
+void empSetPlayPosition(EmpContext *context, const size_t position) {
+    const MprisContext* ctx = (MprisContext*) context;
+    sd_bus_emit_signal(ctx->bus, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", "Seeked", "x", position);
 }
 
 void empSetPlayState(EmpContext* context, EmpPlayState state)
