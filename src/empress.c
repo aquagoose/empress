@@ -53,6 +53,7 @@ typedef struct
     void(*focusCallback)(EmpContext*);
     void(*buttonPressedCallback)(EmpContext*, EmpButton);
     void(*seekCallback)(EmpContext*, size_t, long long);
+    long long(*positionCallback)(EmpContext*);
 } MprisContext;
 
 const char* PlayStateToDBusString(const EmpPlayState state)
@@ -153,7 +154,7 @@ DBUS_PROPERTY_IMPL(GetMetadata)
     const EmpTrackMetadata* metadata = &ctx->trackMetadata;
 
     sd_bus_message_open_container(reply, 'a', "{sv}");
-    DBUS_KEY_VALUE("mpris:trackid", "s", "/org/mpris/MediaPlayer2/Track/0");
+    DBUS_KEY_VALUE("mpris:trackid", "o", "/org/mpris/MediaPlayer2/Track/0");
 
     if (metadata->trackNumber > 0)
         DBUS_KEY_VALUE("xesam:trackNumber", "x", metadata->trackNumber);
@@ -194,6 +195,16 @@ DBUS_PROPERTY_IMPL(GetMetadata)
         DBUS_KEY_VALUE("mpris:artUrl", "s", metadata->imageUri);
 
     return sd_bus_message_close_container(reply);
+}
+
+DBUS_PROPERTY_IMPL(GetPosition)
+{
+    const MprisContext* ctx = (MprisContext*) userdata;
+    if (ctx->positionCallback == NULL)
+        DBUS_RETURN("x", 0);
+
+    const long long value = ctx->positionCallback((EmpContext*) ctx);
+    DBUS_RETURN("x", value);
 }
 
 DBUS_METHOD_IMPL(Play)
@@ -283,6 +294,7 @@ static const sd_bus_vtable PlayerVtable[] = {
     SD_BUS_PROPERTY("CanGoPrevious", "b", GetCanGoPrevious, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("PlaybackStatus", "s", GetPlaybackStatus, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Metadata", "a{sv}", GetMetadata, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Position", "x", GetPosition, 0, 0),
     SD_BUS_METHOD("Play", "", "", Play, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Pause", "", "", Pause, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Stop", "", "", Stop, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -314,7 +326,10 @@ EmpResult empCreate(const EmpApplicationInfo *appInfo, EmpContext **context)
     ctx->canGoNext = false;
     ctx->canGoPrevious = false;
     memset(&ctx->trackMetadata, 0, sizeof(EmpTrackMetadata));
+    ctx->focusCallback = NULL;
     ctx->buttonPressedCallback = NULL;
+    ctx->seekCallback = NULL;
+    ctx->positionCallback = NULL;
 
     if (sd_bus_open_user(&ctx->bus) < 0)
         return EMP_RESULT_UNKNOWN_ERROR;
@@ -390,6 +405,12 @@ void empSetSeekCallback(EmpContext* context, void(*callback)(EmpContext*, size_t
 {
     MprisContext* ctx = (MprisContext*) context;
     ctx->seekCallback = callback;
+}
+
+void empSetPositionCallback(EmpContext *context, long long(*callback)(EmpContext*))
+{
+    MprisContext* ctx = (MprisContext*) context;
+    ctx->positionCallback = callback;
 }
 
 void empSetPlayPosition(EmpContext *context, const size_t position) {

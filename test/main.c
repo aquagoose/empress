@@ -26,6 +26,11 @@ void SeekCallback(EmpContext* context, size_t position, long long seek)
     printf("%lu\n", seek);
 }
 
+void FocusCallback(EmpContext* context)
+{
+    printf("Focus!\n");
+}
+
 int main(void)
 {
     EmpContext* context;
@@ -33,7 +38,7 @@ int main(void)
     EmpApplicationInfo appInfo;
     appInfo.appUniqueName = "test";
     appInfo.appFriendlyName = "Test";
-    appInfo.desktopEntry = "/home/aqua/.local/share/applications/Glimpse";
+    //appInfo.desktopEntry = "/home/aqua/.local/share/applications/Glimpse";
 
     EmpResult result = empCreate(&appInfo, &context);
     if (result != EMP_RESULT_OK)
@@ -45,6 +50,7 @@ int main(void)
     empSetCanGoNext(context, true);
     empSetCanGoPrevious(context, true);
     empSetPlayState(context, EMP_PLAY_STATE_PAUSED);
+    empSetFocusCallback(context, FocusCallback);
     empSetButtonPressedCallback(context, ButtonPressedCallback);
     empSetSeekCallback(context, SeekCallback);
 
