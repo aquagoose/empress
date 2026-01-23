@@ -17,19 +17,25 @@ void ButtonPressedCallback(EmpContext* context, EmpButton button)
         case EMP_BUTTON_PAUSE:
             isPlaying = false;
             break;
-        case EMP_BUTTON_LOOP:
-            if (!loopPlaylist) {
-                loopPlaylist = true;
-            } else if (!loopTrack) {
-                loopTrack = true;
-            } else {
-                loopPlaylist = false;
-                loopTrack = false;
-            }
     }
 
     empSetPlayState(context, isPlaying ? EMP_PLAY_STATE_PLAYING : EMP_PLAY_STATE_PAUSED);
-    empSetLoopState(context, loopPlaylist ? (loopTrack ? EMP_LOOP_TRACK : EMP_LOOP_PLAYLIST) : EMP_LOOP_NONE);
+}
+
+void loopChangedCallback(EmpContext* context, EmpLoopState loopState) {
+    switch (loopState) {
+        case EMP_LOOP_NONE:
+            loopPlaylist = false;
+            loopTrack = false;
+        case EMP_LOOP_PLAYLIST:
+            loopPlaylist = true;
+            loopTrack = false;
+        case EMP_LOOP_TRACK:
+            loopPlaylist = false;
+            loopTrack = true;
+    }
+
+    empSetLoopState(context, loopState);
 }
 
 void SeekCallback(EmpContext* context, size_t position, long long seek)
@@ -64,6 +70,7 @@ int main(void)
     empSetPlayState(context, EMP_PLAY_STATE_PAUSED);
     empSetFocusCallback(context, FocusCallback);
     empSetButtonPressedCallback(context, ButtonPressedCallback);
+    empSetLoopChangedCallback(context, loopChangedCallback);
     empSetSeekCallback(context, SeekCallback);
 
     EmpTrackMetadata metadata = {0};

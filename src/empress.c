@@ -53,6 +53,7 @@ typedef struct
 
     void(*focusCallback)(EmpContext*);
     void(*buttonPressedCallback)(EmpContext*, EmpButton);
+    void(*loopChangedCallback)(EmpContext*, EmpLoopState);
     void(*seekCallback)(EmpContext*, size_t, long long);
     long long(*positionCallback)(EmpContext*);
 } MprisContext;
@@ -171,9 +172,24 @@ DBUS_PROPERTY_IMPL(GetLoopStatus)
 
 DBUS_PROPERTY_IMPL(SetLoopStatus)
 {
+    const char *loopStatus;
+    int ret = sd_bus_message_read(reply, "s", &loopStatus);
+    if (ret < 0) {
+        DBUS_RETURN("", "");
+    }
+    EmpLoopState ls;
+    if (strcmp(loopStatus, "None") == 0) {
+        ls = EMP_LOOP_NONE;
+    } else if (strcmp(loopStatus, "Playlist") == 0) {
+        ls = EMP_LOOP_PLAYLIST;
+    } else if (strcmp(loopStatus, "Track") == 0) {
+        ls = EMP_LOOP_TRACK;
+    } else {
+        DBUS_RETURN("", "");
+    }
     const MprisContext* ctx = (MprisContext*) userdata;
-    if (ctx->buttonPressedCallback)
-        ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_LOOP);
+    if (ctx->loopChangedCallback)
+        ctx->loopChangedCallback((EmpContext*) ctx, ls);
     DBUS_RETURN("", "");
 }
 
@@ -429,6 +445,12 @@ void empSetButtonPressedCallback(EmpContext* context, void(*callback)(EmpContext
 {
     MprisContext* ctx = (MprisContext*) context;
     ctx->buttonPressedCallback = callback;
+}
+
+void empSetLoopChangedCallback(EmpContext* context, void(*callback)(EmpContext*, EmpLoopState))
+{
+    MprisContext* ctx = (MprisContext*) context;
+    ctx->loopChangedCallback = callback;
 }
 
 void empSetSeekCallback(EmpContext* context, void(*callback)(EmpContext*, size_t, long long))
