@@ -23,13 +23,20 @@ typedef enum
     EMP_PLAY_STATE_PLAYING
 } EmpPlayState;
 
+typedef enum 
+{
+    EMP_LOOP_NONE,
+    EMP_LOOP_TRACK,
+    EMP_LOOP_PLAYLIST
+} EmpLoopState;
+
 typedef enum
 {
     EMP_BUTTON_PLAY,
     EMP_BUTTON_PAUSE,
     EMP_BUTTON_STOP,
     EMP_BUTTON_NEXT,
-    EMP_BUTTON_PREVIOUS
+    EMP_BUTTON_PREVIOUS,
 } EmpButton;
 
 typedef struct
@@ -60,11 +67,13 @@ EMP_EXPORT void empDestroy(EmpContext *context);
 
 EMP_EXPORT void empSetFocusCallback(EmpContext *context, void(*callback)(EmpContext*));
 EMP_EXPORT void empSetButtonPressedCallback(EmpContext *context, void(*callback)(EmpContext*, EmpButton));
+EMP_EXPORT void empSetLoopChangedCallback(EmpContext *context, void(*callback)(EmpContext*, EmpLoopState));
 EMP_EXPORT void empSetSeekCallback(EmpContext *context, void(*callback)(EmpContext*, size_t, long long));
 EMP_EXPORT void empSetPositionCallback(EmpContext *context, long long(*callback)(EmpContext*));
 
 EMP_EXPORT void empSetPlayPosition(EmpContext *context, size_t position);
 EMP_EXPORT void empSetPlayState(EmpContext *context, EmpPlayState state);
+EMP_EXPORT void empSetLoopState(EmpContext* context, EmpLoopState state);
 EMP_EXPORT void empSetTrackMetadata(EmpContext *context, EmpTrackMetadata *metadata);
 EMP_EXPORT void empClearTrackMetadata(EmpContext *context);
 
