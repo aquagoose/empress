@@ -4,6 +4,8 @@
 #include <unistd.h>
 
 bool isPlaying = false;
+bool loopPlaylist = false;
+bool loopTrack = false;
 
 void ButtonPressedCallback(EmpContext* context, EmpButton button)
 {
@@ -15,9 +17,19 @@ void ButtonPressedCallback(EmpContext* context, EmpButton button)
         case EMP_BUTTON_PAUSE:
             isPlaying = false;
             break;
+        case EMP_BUTTON_LOOP:
+            if (!loopPlaylist) {
+                loopPlaylist = true;
+            } else if (!loopTrack) {
+                loopTrack = true;
+            } else {
+                loopPlaylist = false;
+                loopTrack = false;
+            }
     }
 
     empSetPlayState(context, isPlaying ? EMP_PLAY_STATE_PLAYING : EMP_PLAY_STATE_PAUSED);
+    empSetLoopState(context, loopPlaylist ? (loopTrack ? EMP_LOOP_TRACK : EMP_LOOP_PLAYLIST) : EMP_LOOP_NONE);
 }
 
 void SeekCallback(EmpContext* context, size_t position, long long seek)

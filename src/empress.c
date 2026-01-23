@@ -43,6 +43,7 @@ typedef struct
     sd_bus_slot* playerSlot;
 
     EmpPlayState currentPlayState;
+    EmpLoopState currentLoopState;
     EmpTrackMetadata trackMetadata;
     bool canPlay;
     bool canPause;
@@ -68,6 +69,20 @@ const char* PlayStateToDBusString(const EmpPlayState state)
             return "Playing";
         default:
             return "Stopped";
+    }
+}
+
+const char* LoopStateToDBusString(const EmpLoopState state) {
+    switch (state)
+    {
+        case EMP_LOOP_NONE:
+            return "None";
+        case EMP_LOOP_TRACK:
+            return "Track";
+        case EMP_LOOP_PLAYLIST:
+            return "Playlist";
+        default:
+            return "None";
     }
 }
 
@@ -146,6 +161,20 @@ DBUS_PROPERTY_IMPL(GetPlaybackStatus)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
     DBUS_RETURN("s", PlayStateToDBusString(ctx->currentPlayState));
+}
+
+DBUS_PROPERTY_IMPL(GetLoopStatus)
+{
+    const MprisContext* ctx = (MprisContext*) userdata;
+    DBUS_RETURN("s", LoopStateToDBusString(ctx->currentLoopState));
+}
+
+DBUS_PROPERTY_IMPL(SetLoopStatus)
+{
+    const MprisContext* ctx = (MprisContext*) userdata;
+    if (ctx->buttonPressedCallback)
+        ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_LOOP);
+    DBUS_RETURN("", "");
 }
 
 DBUS_PROPERTY_IMPL(GetMetadata)
@@ -293,6 +322,7 @@ static const sd_bus_vtable PlayerVtable[] = {
     SD_BUS_PROPERTY("CanGoNext", "b", GetCanGoNext, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CanGoPrevious", "b", GetCanGoPrevious, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("PlaybackStatus", "s", GetPlaybackStatus, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_WRITABLE_PROPERTY("LoopStatus", "s", GetLoopStatus, SetLoopStatus, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Metadata", "a{sv}", GetMetadata, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Position", "x", GetPosition, 0, 0),
     SD_BUS_METHOD("Play", "", "", Play, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -425,6 +455,15 @@ void empSetPlayState(EmpContext* context, EmpPlayState state)
     const char* dbusState = PlayStateToDBusString(state);
     printf("%s\n", dbusState);
     DBUS_PROPERTY_CHANGED("Player", "PlaybackStatus");
+}
+
+void empSetLoopState(EmpContext* context, EmpLoopState state)
+{
+    MprisContext* ctx = (MprisContext*) context;
+    ctx->currentLoopState = state;
+    const char* dbusState = LoopStateToDBusString(state);
+    printf("%s\n", dbusState);
+    DBUS_PROPERTY_CHANGED("Player", "LoopStatus");
 }
 
 void empSetTrackMetadata(EmpContext* context, EmpTrackMetadata* metadata)
