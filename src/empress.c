@@ -6,8 +6,9 @@
 #include <systemd/sd-bus.h>
 
 #define DBUS_PROPERTY_IMPL(FuncName) static int FuncName(sd_bus* bus, const char* path, const char* interface, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error)
-#define DBUS_METHOD_IMPL(FuncName) static int FuncName(sd_bus_message *reply, void *userdata, sd_bus_error *ret_error)
-#define DBUS_RETURN(Types, ...) return sd_bus_message_append(reply, Types, __VA_ARGS__)
+#define DBUS_METHOD_IMPL(FuncName) static int FuncName(sd_bus_message *m, void *userdata, sd_bus_error *ret_error)
+#define DBUS_PROPERTY_RETURN(Types, ...) return sd_bus_message_append(reply, Types, __VA_ARGS__)
+#define DBUS_METHOD_RETURN return sd_bus_reply_method_return(m, "")
 
 #define DBUS_PROPERTY_CHANGED(Interface, Property) sd_bus_emit_properties_changed(ctx->bus, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2."Interface, Property, NULL);
 
@@ -77,7 +78,7 @@ DBUS_PROPERTY_IMPL(GetIdentity)
     const EmpApplicationInfo* appInfo = &ctx->appInfo;
 
     const char* appName = appInfo->appFriendlyName ? appInfo->appFriendlyName : appInfo->appUniqueName;
-    DBUS_RETURN("s", appName);
+    DBUS_PROPERTY_RETURN("s", appName);
 }
 
 DBUS_PROPERTY_IMPL(GetDesktopEntry)
@@ -86,17 +87,17 @@ DBUS_PROPERTY_IMPL(GetDesktopEntry)
     const EmpApplicationInfo* appInfo = &ctx->appInfo;
 
     const char* desktopEntry = appInfo->desktopEntry ? appInfo->desktopEntry : "";
-    DBUS_RETURN("s", desktopEntry);
+    DBUS_PROPERTY_RETURN("s", desktopEntry);
 }
 
 DBUS_PROPERTY_IMPL(GetCanRaise)
 {
-    DBUS_RETURN("b", 1);
+    DBUS_PROPERTY_RETURN("b", 1);
 }
 
 DBUS_PROPERTY_IMPL(GetHasTrackList)
 {
-    DBUS_RETURN("b", 0);
+    DBUS_PROPERTY_RETURN("b", 0);
 }
 
 DBUS_METHOD_IMPL(Raise)
@@ -104,48 +105,48 @@ DBUS_METHOD_IMPL(Raise)
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->focusCallback)
         ctx->focusCallback((EmpContext*) ctx);
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_PROPERTY_IMPL(GetCanControl)
 {
-    DBUS_RETURN("b", 1);
+    DBUS_PROPERTY_RETURN("b", 1);
 }
 
 DBUS_PROPERTY_IMPL(GetCanPlay)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    DBUS_RETURN("b", ctx->canPlay);
+    DBUS_PROPERTY_RETURN("b", ctx->canPlay);
 }
 
 DBUS_PROPERTY_IMPL(GetCanPause)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    DBUS_RETURN("b", ctx->canPause);
+    DBUS_PROPERTY_RETURN("b", ctx->canPause);
 }
 
 DBUS_PROPERTY_IMPL(GetCanSeek)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    DBUS_RETURN("b", ctx->canSeek);
+    DBUS_PROPERTY_RETURN("b", ctx->canSeek);
 }
 
 DBUS_PROPERTY_IMPL(GetCanGoNext)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    DBUS_RETURN("b", ctx->canGoNext);
+    DBUS_PROPERTY_RETURN("b", ctx->canGoNext);
 }
 
 DBUS_PROPERTY_IMPL(GetCanGoPrevious)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    DBUS_RETURN("b", ctx->canGoPrevious);
+    DBUS_PROPERTY_RETURN("b", ctx->canGoPrevious);
 }
 
 DBUS_PROPERTY_IMPL(GetPlaybackStatus)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
-    DBUS_RETURN("s", PlayStateToDBusString(ctx->currentPlayState));
+    DBUS_PROPERTY_RETURN("s", PlayStateToDBusString(ctx->currentPlayState));
 }
 
 DBUS_PROPERTY_IMPL(GetMetadata)
@@ -177,7 +178,7 @@ DBUS_PROPERTY_IMPL(GetMetadata)
 
     if (metadata->length > 0)
     {
-        unsigned long int lengthInMicroseconds = metadata->length;
+        int64_t lengthInMicroseconds = (int64_t) metadata->length;
         DBUS_KEY_VALUE("mpris:length", "x", lengthInMicroseconds);
     }
 
@@ -201,10 +202,10 @@ DBUS_PROPERTY_IMPL(GetPosition)
 {
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->positionCallback == NULL)
-        DBUS_RETURN("x", 0);
+        DBUS_PROPERTY_RETURN("x", 0);
 
     const long long value = ctx->positionCallback((EmpContext*) ctx);
-    DBUS_RETURN("x", value);
+    DBUS_PROPERTY_RETURN("x", value);
 }
 
 DBUS_METHOD_IMPL(Play)
@@ -212,7 +213,7 @@ DBUS_METHOD_IMPL(Play)
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->buttonPressedCallback)
         ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PLAY);
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_METHOD_IMPL(Pause)
@@ -220,7 +221,30 @@ DBUS_METHOD_IMPL(Pause)
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->buttonPressedCallback)
         ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PAUSE);
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
+}
+
+DBUS_METHOD_IMPL(PlayPause)
+{
+    const MprisContext* ctx = (MprisContext*) userdata;
+    if (ctx->buttonPressedCallback)
+    {
+        const EmpPlayState state = ctx->currentPlayState;
+        EmpButton button = EMP_BUTTON_STOP;
+        switch (state)
+        {
+            case EMP_PLAY_STATE_STOPPED:
+                DBUS_METHOD_RETURN; // Do nothing if the playback is stopped
+            case EMP_PLAY_STATE_PAUSED:
+                button = EMP_BUTTON_PLAY;
+                break;
+            case EMP_PLAY_STATE_PLAYING:
+                button = EMP_BUTTON_PAUSE;
+                break;
+        }
+        ctx->buttonPressedCallback((EmpContext*) ctx, button);
+    }
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_METHOD_IMPL(Stop)
@@ -228,7 +252,7 @@ DBUS_METHOD_IMPL(Stop)
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->buttonPressedCallback)
         ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_STOP);
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_METHOD_IMPL(Next)
@@ -236,7 +260,7 @@ DBUS_METHOD_IMPL(Next)
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->buttonPressedCallback)
         ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_NEXT);
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_METHOD_IMPL(Previous)
@@ -244,7 +268,7 @@ DBUS_METHOD_IMPL(Previous)
     const MprisContext* ctx = (MprisContext*) userdata;
     if (ctx->buttonPressedCallback)
         ctx->buttonPressedCallback((EmpContext*) ctx, EMP_BUTTON_PREVIOUS);
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_METHOD_IMPL(SetPosition)
@@ -253,10 +277,10 @@ DBUS_METHOD_IMPL(SetPosition)
     if (ctx->seekCallback)
     {
         size_t position;
-        sd_bus_message_read(reply, "ox", NULL, &position);
+        sd_bus_message_read(m, "ox", NULL, &position);
         ctx->seekCallback((EmpContext*) ctx, position, 0);
     }
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 DBUS_METHOD_IMPL(Seek)
@@ -265,10 +289,10 @@ DBUS_METHOD_IMPL(Seek)
     if (ctx->seekCallback)
     {
         long int seekAmount;
-        sd_bus_message_read(reply, "x", &seekAmount);
+        sd_bus_message_read(m, "x", &seekAmount);
         ctx->seekCallback((EmpContext*) ctx, seekAmount, 0);
     }
-    DBUS_RETURN("", "");
+    DBUS_METHOD_RETURN;
 }
 
 static const sd_bus_vtable MprisVtable[] = {
@@ -297,6 +321,7 @@ static const sd_bus_vtable PlayerVtable[] = {
     SD_BUS_PROPERTY("Position", "x", GetPosition, 0, 0),
     SD_BUS_METHOD("Play", "", "", Play, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Pause", "", "", Pause, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("PlayPause", "", "", PlayPause, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Stop", "", "", Stop, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Next", "", "", Next, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Previous", "", "", Previous, SD_BUS_VTABLE_UNPRIVILEGED),
